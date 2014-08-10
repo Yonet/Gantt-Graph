@@ -279,7 +279,7 @@ angular.module('ganttChartApp')
 				for (var i = 0; i < items.length; i++) {
 					d = items[i];
 					if (!paths[d.class]) { paths[d.class] = ''; }
-					paths[d.class] += ['M',x(d.start),(y2(d.lane) + offset),'H',x(d.end)].join(' ');
+					paths[d.class] += ['M',x(dateFormat.parse(d.start)),(y2(d.lane) + offset),'H',x(dateFormat.parse(d.end))].join(' ');
 				}
 
 				for (var className in paths) {
