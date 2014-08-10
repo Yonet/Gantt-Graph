@@ -1,6 +1,16 @@
 {
   "name": "ganttchart",
   "version": "0.0.0",
+  "author": "Aysegul Yonet",
+  "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Yonet/Gantt-Graph.git"
+  },
+  "license": "BSD",
+  "bugs": {
+    "url": "https://github.com/Yonet/Gantt-Graph/issues"
+  },
   "dependencies": {},
   "devDependencies": {
     "grunt": "^0.4.1",
@@ -33,5 +43,11 @@
   },
   "scripts": {
     "test": "grunt test"
-  }
+  },
+  "keywords": [
+    "Grant",
+    "graph",
+    "d3",
+    "angular"
+  ]
 }
