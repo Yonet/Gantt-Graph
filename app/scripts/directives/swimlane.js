@@ -10,8 +10,8 @@ angular.module('ganttChartApp')
 	.directive('swimlaneChart', function () {
 
 		//Sets up the display variables 
-		var margin = {top: 20, right: 0, bottom: 15, left: 0},
-			width = 960 - margin.left - margin.right,
+		var margin = {top: 20, right: 0, bottom: 15, left: 50},
+			width = 1300 - margin.left - margin.right,
 			height = 800 - margin.top - margin.bottom,
 			now = new Date();
 			// colors = d3.scale.category20();
@@ -19,26 +19,26 @@ angular.module('ganttChartApp')
 		//Linking function
 		var link = function (scope, element, attr) {
 			var el = element[0],
-				data = scope.data,
+				data = scope.data,//.slice(0, 30),
 				dateFormat = d3.time.format('%y%m%d%H%M%S%Z'),//formats date 140227003408+0000
 				tickFormat = d3.time.format('%Y-%m-%d'),//x axis tick format
 				laneStarts = [
 					data[0].start
 				];//initializes an array to store the starting date of each lane
-
-
-
+			data[0].lane = 0;
 			//Calculates and assignes lane property of each event
-			angular.forEach(data, function(value) {
+			angular.forEach(data, function(value, key) {
 				var len = laneStarts.length;
 				for (var i = 0; i < len; i++) {
+					// debugger;
 					if(value.end < laneStarts[i]) {
 						value.lane = i;
 						laneStarts[i] = value.start;
+						return;
 					}
 				}
 				//If a date range doesn't fit in any lanes add a new lane
-				if(!value.lane) {
+				if(value.lane === undefined) {
 					laneStarts[len] = value.start;
 					value.lane = len;
 				}
@@ -75,7 +75,7 @@ angular.module('ganttChartApp')
 				.attr('class', 'chart');
 
 			//Clipping Path
-			chart.append('desc').append('clipPath')
+			chart.append('defs').append('clipPath')
 				.attr('id', 'clip')
 				.append('rect')
 					.attr('width', width)
@@ -105,6 +105,16 @@ angular.module('ganttChartApp')
 				.attr('y2', function(d, i) { return d3.round(y1(i)) + 0.5; })
 				.attr('stroke', 'lightgray');
 
+			main.append('g').selectAll('.laneText')
+				.data(laneStarts)
+				.enter().append('text')
+				.text(function(d, i) { return 'lane-' + i; })
+				.attr('x', -10)
+				.attr('y', function(d, i) { return y1(i + 0.5); })
+				.attr('dy', '0.5ex')
+				.attr('text-anchor', 'end')
+				.attr('class', 'laneText');
+
 			// draw the lanes for the mini chart
 			mini.append('g').selectAll('.laneLines')
 				.data(laneStarts)
@@ -114,6 +124,16 @@ angular.module('ganttChartApp')
 				.attr('x2', width)
 				.attr('y2', function(d, i) { return d3.round(y2(i)) + 0.5; })
 				.attr('stroke', 'lightgray');
+
+			mini.append('g').selectAll('.laneText')
+				.data(lanes)
+				.enter().append('text')
+				.text(function(d, i) { return 'lane-' + i; })
+				.attr('x', -10)
+				.attr('y', function(d, i) { return y2(i + 0.5); })
+				.attr('dy', '0.5ex')
+				.attr('text-anchor', 'end')
+				.attr('class', 'laneText');
 
 			// draw the x axis
 			var xDateAxis = d3.svg.axis()
@@ -169,6 +189,19 @@ angular.module('ganttChartApp')
 				.selectAll('text')
 					.attr('dx', 5)
 					.attr('dy', 12);
+			// // draw a line representing today's date
+			// main.append('line')
+			// 	.attr('y1', 0)
+			// 	.attr('y2', mainHeight)
+			// 	.attr('class', 'main todayLine')
+			// 	.attr('clip-path', 'url(#clip)');
+
+			// mini.append('line')
+			// 	.attr('x1', x(now) + 0.5)
+			// 	.attr('y1', 0)
+			// 	.attr('x2', x(now) + 0.5)
+			// 	.attr('y2', miniHeight)
+			// 	.attr('class', 'todayLine');
 
 			// draw the items
 			var itemRects = main.append('g')
@@ -189,7 +222,7 @@ angular.module('ganttChartApp')
 			// draw the selection area
 			var brush = d3.svg.brush()
 				.x(x)
-				.extent([d3.time.monday(now),d3.time.saturday.ceil(now)])
+				.extent([dateFormat.parse(data[99].start),d3.time.monday(now)])
 				.on('brush', display);
 
 			mini.append('g')
@@ -206,7 +239,7 @@ angular.module('ganttChartApp')
 				var rects, labels,
 					minExtent = d3.time.day(brush.extent()[0]),
 					maxExtent = d3.time.day(brush.extent()[1]),
-					visItems = data.filter(function (d) { return d.start < maxExtent && d.end > minExtent;});
+					visItems = data.filter(function (d) { return dateFormat.parse(d.start) < maxExtent && dateFormat.parse(d.end) > minExtent;});
 
 				mini.select('.brush').call(brush.extent([minExtent, maxExtent]));
 
@@ -235,14 +268,15 @@ angular.module('ganttChartApp')
 
 				// upate the item rects
 				rects = itemRects.selectAll('rect')
-					.data(visItems, function (d) { return d.id; })
-					.attr('x', function(d) { return x1(d.start); })
-					.attr('width', function(d) { return x1(d.end) - x1(d.start); });
+					.data(visItems, function (d, i) { return i; })
+					.attr('opacity', 0.5)
+					.attr('x', function(d) { return x1(dateFormat.parse(d.start)); })
+					.attr('width', function(d) { return x1(dateFormat.parse(d.end)) - x1(dateFormat.parse(d.start)); });
 
 				rects.enter().append('rect')
-					.attr('x', function(d) { return x1(d.start); })
+					.attr('x', function(d) { return x1(dateFormat.parse(d.start)); })
 					.attr('y', function(d) { return y1(d.lane) + 0.1 * y1(1) + 0.5; })
-					.attr('width', function(d) { return x1(d.end) - x1(d.start); })
+					.attr('width', function(d) { return x1(dateFormat.parse(d.end)) - x1(dateFormat.parse(d.start)); })
 					.attr('height', function(d) { return 0.8 * y1(1); })
 					.attr('class', function(d) { return 'mainItem ' + d.class; });
 
@@ -251,11 +285,11 @@ angular.module('ganttChartApp')
 				// update the item labels
 				labels = itemRects.selectAll('text')
 					.data(visItems, function (d, i) { return i; })
-					.attr('x', function(d) { return x1(Math.max(d.start, minExtent)) + 2; });
+					.attr('x', function(d) { return x1(Math.max(dateFormat.parse(d.start), minExtent)) + 2; });
 							
 				labels.enter().append('text')
-					.text(function (d) { return 'Item\n\n\n\n Id: ' + d.id; })
-					.attr('x', function(d) { return x1(Math.max(d.start, minExtent)) + 2; })
+					.text(function (d,i) { return i; })
+					.attr('x', function(d) { return x1(Math.max(dateFormat.parse(d.start), minExtent)) + 2; })
 					.attr('y', function(d) { return y1(d.lane) + 0.4 * y1(1) + 0.5; })
 					.attr('text-anchor', 'start')
 					.attr('class', 'itemLabel');
