@@ -19,7 +19,7 @@ angular.module('ganttChartApp')
 		//Linking function
 		var link = function (scope, element, attr) {
 			var el = element[0],
-				data = scope.data,//.slice(0, 30),
+				data = scope.data,//.slice(60, 90),
 				dateFormat = d3.time.format('%y%m%d%H%M%S%Z'),//formats date 140227003408+0000
 				tickFormat = d3.time.format('%Y-%m-%d'),//x axis tick format
 				laneStarts = [
@@ -30,7 +30,6 @@ angular.module('ganttChartApp')
 			angular.forEach(data, function(value, key) {
 				var len = laneStarts.length;
 				for (var i = 0; i < len; i++) {
-					// debugger;
 					if(value.end < laneStarts[i]) {
 						value.lane = i;
 						laneStarts[i] = value.start;
@@ -44,6 +43,8 @@ angular.module('ganttChartApp')
 				}
 			});
 
+			var chartStartDate = dateFormat.parse(d3.min(laneStarts)),
+				chartEndDate = dateFormat.parse(data[0].end);
 
 			//Tooltip div 
 			var tooltipDiv = d3.select(el).append('div')
@@ -56,7 +57,7 @@ angular.module('ganttChartApp')
 				mainHeight = 500,//height - miniHeight - 50,
 				sublaneHeight = mainHeight / lanes;
 
-			//x scale
+			//x scale between month start and month end of event date range
 			var x = d3.time.scale()
 				.domain([d3.time.sunday(d3.min(data, function(d) { return dateFormat.parse(d.start); })),
 				d3.max(data, function(d) { return dateFormat.parse(d.end); })])
@@ -134,48 +135,34 @@ angular.module('ganttChartApp')
 				.attr('dy', '0.5ex')
 				.attr('text-anchor', 'end')
 				.attr('class', 'laneText');
-
 			// draw the x axis
 			var xDateAxis = d3.svg.axis()
 				.scale(x)
 				.orient('bottom')
 				.ticks(d3.time.mondays, (x.domain()[1] - x.domain()[0]) > 15552e6 ? 2 : 1)
 				.tickFormat(d3.time.format('%d'))
-				.tickSize(6, 0, 0);
+				.tickSize(1, 0, 0);
 
 			var x1DateAxis = d3.svg.axis()
 				.scale(x1)
 				.orient('bottom')
-				.ticks(d3.time.days, 1)
+				.ticks(d3.time.weeks, 1)
 				.tickFormat(d3.time.format('%a %d'))
-				.tickSize(6, 0, 0);
+				.tickSize(1, 0, 0);
 
 			var xMonthAxis = d3.svg.axis()
 				.scale(x)
 				.orient('top')
 				.ticks(d3.time.months, 1)
 				.tickFormat(d3.time.format('%b %Y'))
-				.tickSize(15, 0, 0);
+				.tickSize(1, 0, 0);
 
 			var x1MonthAxis = d3.svg.axis()
 				.scale(x1)
 				.orient('top')
-				.ticks(d3.time.mondays, 1)
-				.tickFormat(d3.time.format('%b - Week %W'))
+				.ticks(d3.time.months, 1)
+				.tickFormat(d3.time.format('%b'))
 				.tickSize(15, 0, 0);
-
-			main.append('g')
-				.attr('transform', 'translate(0,' + mainHeight + ')')
-				.attr('class', 'main axis date')
-				.call(x1DateAxis);
-
-			main.append('g')
-				.attr('transform', 'translate(0,0.5)')
-				.attr('class', 'main axis month')
-				.call(x1MonthAxis)
-				.selectAll('text')
-					.attr('dx', 5)
-					.attr('dy', 12);
 
 			mini.append('g')
 				.attr('transform', 'translate(0,' + miniHeight + ')')
@@ -189,19 +176,6 @@ angular.module('ganttChartApp')
 				.selectAll('text')
 					.attr('dx', 5)
 					.attr('dy', 12);
-			// // draw a line representing today's date
-			// main.append('line')
-			// 	.attr('y1', 0)
-			// 	.attr('y2', mainHeight)
-			// 	.attr('class', 'main todayLine')
-			// 	.attr('clip-path', 'url(#clip)');
-
-			// mini.append('line')
-			// 	.attr('x1', x(now) + 0.5)
-			// 	.attr('y1', 0)
-			// 	.attr('x2', x(now) + 0.5)
-			// 	.attr('y2', miniHeight)
-			// 	.attr('class', 'todayLine');
 
 			// draw the items
 			var itemRects = main.append('g')
@@ -219,10 +193,12 @@ angular.module('ganttChartApp')
 				.attr('height', miniHeight)
 				.attr('visibility', 'hidden')
 				.on('mouseup', moveBrush);
+			var brushStartDate = d3.time.month.floor(now),//start of current month
+				brushEndDate = d3.time.month.ceil(now);//start of next month
 			// draw the selection area
 			var brush = d3.svg.brush()
 				.x(x)
-				.extent([dateFormat.parse(data[99].start),d3.time.monday(now)])
+				.extent([chartStartDate,brushEndDate])
 				.on('brush', display);
 
 			mini.append('g')
@@ -244,31 +220,11 @@ angular.module('ganttChartApp')
 				mini.select('.brush').call(brush.extent([minExtent, maxExtent]));
 
 				x1.domain([minExtent, maxExtent]);
-				//Format ticks depending on time range
-				if ((maxExtent - minExtent) > 1468800000) {
-					x1DateAxis.ticks(d3.time.mondays, 1).tickFormat(d3.time.format('%a %d'));
-					x1MonthAxis.ticks(d3.time.mondays, 1).tickFormat(d3.time.format('%b - Week %W'));
-				}
-				else if ((maxExtent - minExtent) > 172800000) {
-					x1DateAxis.ticks(d3.time.days, 1).tickFormat(d3.time.format('%a %d'));
-					x1MonthAxis.ticks(d3.time.mondays, 1).tickFormat(d3.time.format('%b - Week %W'));
-				}
-				else {
-					x1DateAxis.ticks(d3.time.hours, 4).tickFormat(d3.time.format('%I %p'));//12 AM
-					x1MonthAxis.ticks(d3.time.days, 1).tickFormat(d3.time.format('%b %e'));//Aug 1
-				}
-
-
-				// update the axis
-				main.select('.main.axis.date').call(x1DateAxis);
-				main.select('.main.axis.month').call(x1MonthAxis)
-					.selectAll('text')
-						.attr('dx', 5)
-						.attr('dy', 12);
+				
 
 				// upate the item rects
 				rects = itemRects.selectAll('rect')
-					.data(visItems, function (d, i) { return i; })
+					.data(visItems)//, function (d, i) { return i; })
 					.attr('opacity', 0.5)
 					.attr('x', function(d) { return x1(dateFormat.parse(d.start)); })
 					.attr('width', function(d) { return x1(dateFormat.parse(d.end)) - x1(dateFormat.parse(d.start)); });
@@ -278,23 +234,39 @@ angular.module('ganttChartApp')
 					.attr('y', function(d) { return y1(d.lane) + 0.1 * y1(1) + 0.5; })
 					.attr('width', function(d) { return x1(dateFormat.parse(d.end)) - x1(dateFormat.parse(d.start)); })
 					.attr('height', function(d) { return 0.8 * y1(1); })
-					.attr('class', function(d) { return 'mainItem ' + d.class; });
+					.attr('class', function(d) { return 'mainItem ' + d.class; })
+					.attr('opacity', '0.6')
+					.text(function (d) { return d.id; });
+
 
 				rects.exit().remove();
 
 				// update the item labels
 				labels = itemRects.selectAll('text')
-					.data(visItems, function (d, i) { return i; })
+					.data(visItems)//, function (d, i) { return i; })
 					.attr('x', function(d) { return x1(Math.max(dateFormat.parse(d.start), minExtent)) + 2; });
 							
 				labels.enter().append('text')
-					.text(function (d,i) { return i; })
+					.text(function (d) { return d.id; })
+					.attr('opacity', '0')
 					.attr('x', function(d) { return x1(Math.max(dateFormat.parse(d.start), minExtent)) + 2; })
 					.attr('y', function(d) { return y1(d.lane) + 0.4 * y1(1) + 0.5; })
 					.attr('text-anchor', 'start')
-					.attr('class', 'itemLabel');
+					.attr('class', 'itemLabel')
+					.on('mouseover', function(d){
+						var selectedRect = d3.select(this).style('opacity', '0.8');
+					}).on('mouseout', function(d){
+						var selectedRect = d3.select(this).style('opacity', '0');
+					});;
 
 				labels.exit().remove();
+				// rects.on('mouseover', function(d){
+				// 		var selectedRect = d3.select(this).style('opacity', '0.8');
+				// 		scope.text = d.id;
+				// 	}).on('mouseout', function(d){
+				// 		var selectedRect = d3.select(this).style('opacity', '0.6');
+				// 		selectedRect.select("text").style({opacity:'0'});
+				// 	});
 			}
 
 			function moveBrush () {
@@ -309,7 +281,7 @@ angular.module('ganttChartApp')
 			}
 
 			function getPaths(items) {
-				var paths = {}, d, offset = 0.5 * y2(1) + 0.5, result = [];
+				var paths = {}, d, offset = y2(1), result = [];
 				for (var i = 0; i < items.length; i++) {
 					d = items[i];
 					if (!paths[d.class]) { paths[d.class] = ''; }

@@ -11,6 +11,9 @@ angular.module('ganttChartApp')
 	.controller('MainCtrl', ['$scope', 'httpRequest', 'dataService',function ($scope, httpRequest, dataService) {
 		
 		// var url = 'http://dev.poshly.com/api/v1/giveaways';
-		$scope.chartData = dataService.getData();
+		var chartData = dataService.getData();
+		$scope.data = chartData.data;
+        // console.log('len',$scope.data.length);
+        
 		
 	}]);

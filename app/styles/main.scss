@@ -88,3 +88,47 @@ body {
     border-bottom: 0;
   }
 }
+// =======
+.chart {
+  shape-rendering: crispEdges;
+}
+
+.mini text {
+  font: 9px sans-serif; 
+}
+
+
+.main text {
+  font: 12px sans-serif;  
+}
+
+
+.month text {
+  text-anchor: start;
+}
+
+.axis line, .axis path {
+  stroke: black;
+}
+
+.mainItem {
+  fill: #ddd;
+  .active {
+    opacity: 1;
+  }
+}
+.miniItem {
+  fill: #ddd;
+}
+
+.past {
+  stroke: green;
+  fill: lightgreen;
+}
+
+
+.brush .extent {
+  stroke: gray;
+  fill: blue;
+  fill-opacity: .165;
+}
